@@ -1273,6 +1273,65 @@ lyd_wd_update_parents(struct lyd_node *node)
     }
 }
 
+
+int
+lyd_node_contained_in_subtree(struct lyd_node *node, struct lyd_node *subtree)
+{
+    struct lyd_node *iter;
+
+    LY_TREE_FOR(subtree, iter) {
+        if (node == iter)
+            return 1;
+        switch (iter->schema->nodetype) {
+        case LYS_LIST:
+        case LYS_CONTAINER:
+        case LYS_ACTION:
+        case LYS_NOTIF:
+        case LYS_RPC:
+        case LYS_INPUT:
+        case LYS_OUTPUT:
+            if (lyd_node_contained_in_subtree(node, iter->child))
+                return 1;
+            break;
+        default:
+            break;
+        }
+    }
+    return 0;
+}
+
+
+void
+lyd_check_leaf_list_interlinks(struct lyd_node *target, struct lyd_node *source)
+{
+    struct lyd_node *iter;
+    struct lyd_node_leaf_list *leaf;
+
+    LY_TREE_FOR(target, iter) {
+        switch (iter->schema->nodetype) {
+        case LYS_LEAF:
+        case LYS_LEAFLIST:
+            leaf = (struct lyd_node_leaf_list *)iter;
+            if (leaf->value_type == LY_TYPE_LEAFREF && lyd_node_contained_in_subtree(leaf->value.leafref, source)) {
+                leaf->value.leafref = NULL;
+            }
+            break;
+        case LYS_LIST:
+        case LYS_CONTAINER:
+        case LYS_ACTION:
+        case LYS_NOTIF:
+        case LYS_RPC:
+        case LYS_INPUT:
+        case LYS_OUTPUT:
+            lyd_check_leaf_list_interlinks(iter->child, source);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+
 /* op - 0 add, 1 del, 2 mod (add + del) */
 static void
 check_leaf_list_backlinks(struct lyd_node *node, int op)
@@ -2780,6 +2839,8 @@ src_insert:
         }
     }
 
+    lyd_check_leaf_list_interlinks(target, source);
+
     lyd_free_withsiblings(source);
     if (clear_flag) {
         return 2;
@@ -2861,6 +2922,8 @@ lyd_merge_siblings(struct lyd_node *target, struct lyd_node *source, int options
             lyd_insert_after(target->prev, ins);
         }
     }
+
+    lyd_check_leaf_list_interlinks(target, source);
 
     lyd_free_withsiblings(source);
     if (clear_flag) {
