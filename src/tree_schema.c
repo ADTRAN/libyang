@@ -3880,7 +3880,7 @@ lys_features_disable_recursive(struct lys_feature *f)
 }
 
 /*
- * op: 1 - enable, 0 - disable
+ * op: 1 - enable, 2 - enable w/o checks, 0 - disable
  */
 static int
 lys_features_change(const struct lys_module *module, const char *name, int op)
@@ -3925,7 +3925,11 @@ lys_features_change(const struct lys_module *module, const char *name, int op)
                         }
                     }
 
-                    if (op) {
+                    if (op == 2) {
+                        /* enable the feature w/o further checks */
+                        f[j].flags |= LYS_FENABLED;
+                    }
+                    else if (op) {
                         /* check referenced features if they are enabled */
                         for (k = 0; k < f[j].iffeature_size; k++) {
                             if (!resolve_iffeature(&f[j].iffeature[k])) {
@@ -3980,6 +3984,14 @@ lys_features_enable(const struct lys_module *module, const char *feature)
     FUN_IN;
 
     return lys_features_change(module, feature, 1);
+}
+
+API int
+lys_features_enable_internal(const struct lys_module *module, const char *feature)
+{
+    FUN_IN;
+
+    return lys_features_change(module, feature, 2);
 }
 
 API int

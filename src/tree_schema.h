@@ -2175,6 +2175,17 @@ const char **lys_features_list(const struct lys_module *module, uint8_t **states
 int lys_features_enable(const struct lys_module *module, const char *feature);
 
 /**
+ * @brief Enable specified feature in the module w/o dependency checks
+ *
+ * By default, when the module is loaded by libyang parser, all features are disabled.
+ *
+ * @param[in] module Module where the feature will be enabled.
+ * @param[in] feature Name of the feature to enable. To enable all features at once, use asterisk character.
+ * @return 0 on success, 1 when the feature is not defined in the specified module
+ */
+int lys_features_enable_internal(const struct lys_module *module, const char *feature);
+
+/**
  * @brief Disable specified feature in the module
  *
  * By default, when the module is loaded by libyang parser, all features are disabled.
